@@ -34,9 +34,10 @@ _CATEGORY_COLORS = {
 
 
 def _bar_chart(df_full: pd.DataFrame, nutrient_col: str, nutrient_key: str) -> None:
+    all_cols = ["Продукт", "Категория", nutrient_col, "Калории", "Белки (г)", "Клетчатка (г)", "Жиры (г)", "Углеводы (г)"]
+    unique_cols = list(dict.fromkeys(all_cols))
     top = (
-        df_full[["Продукт", "Категория", nutrient_col, "Калории", "Белки (г)", "Клетчатка (г)", "Жиры (г)", "Углеводы (г)"]]
-        .drop_duplicates()
+        df_full[unique_cols]
         .sort_values(nutrient_col, ascending=True)
         .tail(15)
     )

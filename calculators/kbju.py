@@ -45,3 +45,33 @@ def calculate_macros(target_calories: float, weight_kg: float) -> dict:
         "fat": round(fat_g, 1),
         "carbs": round(carbs_g, 1),
     }
+
+
+def calculate_bmi(weight_kg: float, height_cm: float) -> float:
+    return weight_kg / (height_cm / 100) ** 2
+
+
+def bmi_category(bmi: float) -> tuple[str, str]:
+    """Returns (label, color)."""
+    if bmi < 18.5:
+        return "Дефицит веса", "#5A9BE0"
+    elif bmi < 25.0:
+        return "Норма", "#58C4A0"
+    elif bmi < 30.0:
+        return "Избыточный вес", "#E0C95A"
+    return "Ожирение", "#E07B5A"
+
+
+def ideal_weight_range(height_cm: float) -> tuple[float, float]:
+    h = height_cm / 100
+    return round(18.5 * h ** 2, 1), round(24.9 * h ** 2, 1)
+
+
+def weight_projection(weight: float, deficit_per_day: float, period_days: int) -> list[tuple[float, float]]:
+    """Returns list of (week, weight_kg) tuples."""
+    loss_per_day = deficit_per_day / KCAL_PER_KG_FAT
+    step = max(1, period_days // 20)
+    days = list(range(0, period_days + 1, step))
+    if days[-1] != period_days:
+        days.append(period_days)
+    return [(d / 7, round(weight - loss_per_day * d, 2)) for d in days]

@@ -32,8 +32,11 @@ def _donut_chart(macros: dict, target_cal: float) -> go.Figure:
     grams  = [macros["protein"], macros["fat"], macros["carbs"]]
     kcals  = [macros["protein"] * 4, macros["fat"] * 9, macros["carbs"] * 4]
     colors = [_MACRO_COLORS[l] for l in labels]
-    pcts   = [k / target_cal * 100 if target_cal else 0 for k in kcals]
-    custom = [[f"{g:.1f} г", f"{p:.1f}%"] for g, p in zip(grams, pcts)]
+    pcts = [k / target_cal * 100 if target_cal else 0 for k in kcals]
+    hover_texts = [
+        f"<b>{lb}</b><br>{g:.1f} г<br>{k:.0f} ккал<br>{p:.1f}% от суточной нормы"
+        for lb, g, k, p in zip(labels, grams, kcals, pcts)
+    ]
 
     fig = go.Figure(go.Pie(
         labels=labels,
@@ -42,14 +45,8 @@ def _donut_chart(macros: dict, target_cal: float) -> go.Figure:
         marker=dict(colors=colors, line=dict(color="#1e1e1e", width=2)),
         textinfo="label+percent",
         textfont=dict(size=13),
-        hovertemplate=(
-            "<b>%{label}</b><br>"
-            "%{customdata[0]}<br>"
-            "%{value:.0f} ккал<br>"
-            "%{customdata[1]} от суточной нормы"
-            "<extra></extra>"
-        ),
-        customdata=custom,
+        text=hover_texts,
+        hovertemplate="%{text}<extra></extra>",
     ))
 
     fig.update_layout(

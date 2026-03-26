@@ -1,3 +1,4 @@
+import plotly.graph_objects as go
 import streamlit as st
 
 from calculators.kbju import (
@@ -19,6 +20,97 @@ _ACTIVITY_LABELS = {
     1.900: "Очень высокоактивный",
 }
 
+_MACRO_COLORS = {
+    "Белки":    "#4C9BE8",
+    "Жиры":     "#F4845F",
+    "Углеводы": "#58C4A0",
+}
+
+
+def _donut_chart(macros: dict, target_cal: float) -> go.Figure:
+    labels = ["Белки", "Жиры", "Углеводы"]
+    grams  = [macros["protein"], macros["fat"], macros["carbs"]]
+    kcals  = [macros["protein"] * 4, macros["fat"] * 9, macros["carbs"] * 4]
+    colors = [_MACRO_COLORS[l] for l in labels]
+    pcts   = [k / target_cal * 100 if target_cal else 0 for k in kcals]
+
+    fig = go.Figure(go.Pie(
+        labels=labels,
+        values=kcals,
+        hole=0.55,
+        marker=dict(colors=colors, line=dict(color="#1e1e1e", width=2)),
+        textinfo="label+percent",
+        textfont=dict(size=13),
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "%{customdata[0]:.1f} г<br>"
+            "%{value:.0f} ккал<br>"
+            "%{customdata[1]:.1f}% от суточной нормы"
+            "<extra></extra>"
+        ),
+        customdata=list(zip(grams, pcts)),
+    ))
+
+    fig.update_layout(
+        annotations=[dict(
+            text=f"<b>{int(round(target_cal))}</b><br>ккал",
+            x=0.5, y=0.5,
+            font=dict(size=18),
+            showarrow=False,
+        )],
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+        margin=dict(t=10, b=10, l=10, r=10),
+        height=320,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        hoverlabel=dict(bgcolor="#2b2b2b", font_color="white", font_size=13, bordercolor="#555"),
+    )
+    return fig
+
+
+def _energy_gauge(target_cal: float, tdee: float) -> go.Figure:
+    pct = min(target_cal / tdee * 100, 100) if tdee else 0
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number+delta",
+        value=target_cal,
+        delta=dict(
+            reference=tdee,
+            valueformat=".0f",
+            suffix=" ккал",
+            increasing=dict(color="#F4845F"),
+            decreasing=dict(color="#58C4A0"),
+        ),
+        number=dict(suffix=" ккал", font=dict(size=22)),
+        gauge=dict(
+            axis=dict(range=[0, tdee * 1.1], ticksuffix=" ккал", tickfont=dict(size=10)),
+            bar=dict(color="#4C9BE8", thickness=0.25),
+            bgcolor="rgba(0,0,0,0)",
+            borderwidth=0,
+            steps=[
+                dict(range=[0, MIN_SAFE_CALORIES], color="#3a1a1a"),
+                dict(range=[MIN_SAFE_CALORIES, tdee * 0.7], color="#2a3a2a"),
+                dict(range=[tdee * 0.7, tdee], color="#1e2e1e"),
+            ],
+            threshold=dict(
+                line=dict(color="#F4845F", width=3),
+                thickness=0.8,
+                value=tdee,
+            ),
+        ),
+        title=dict(text="Цель vs TDEE", font=dict(size=14)),
+    ))
+
+    fig.update_layout(
+        height=220,
+        margin=dict(t=40, b=10, l=30, r=30),
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white"),
+        hoverlabel=dict(bgcolor="#2b2b2b", font_color="white"),
+    )
+    return fig
+
 
 def render_calculator_tab() -> None:
     st.header("Расчёт КБЖУ для похудения")
@@ -34,9 +126,7 @@ def render_calculator_tab() -> None:
         weight = st.number_input(
             "Текущий вес (кг)", min_value=30.0, max_value=250.0, value=75.0, step=0.5
         )
-        height = st.number_input(
-            "Рост (см)", min_value=140, max_value=220, value=175
-        )
+        height = st.number_input("Рост (см)", min_value=140, max_value=220, value=175)
 
         steps = st.slider(
             "Среднее кол-во шагов в день",
@@ -49,19 +139,10 @@ def render_calculator_tab() -> None:
 
         st.subheader("Цель")
         target_loss = st.number_input(
-            "Хочу похудеть на (кг)",
-            min_value=0.1,
-            max_value=100.0,
-            value=5.0,
-            step=0.5,
+            "Хочу похудеть на (кг)", min_value=0.1, max_value=100.0, value=5.0, step=0.5
         )
         period_unit = st.radio("Период", ["Недели", "Дни"], horizontal=True)
-        period_val = st.number_input(
-            "Количество",
-            min_value=1,
-            max_value=365,
-            value=8,
-        )
+        period_val = st.number_input("Количество", min_value=1, max_value=365, value=8)
 
     period_days = period_val * 7 if period_unit == "Недели" else period_val
 
@@ -75,7 +156,6 @@ def render_calculator_tab() -> None:
     with col_results:
         st.subheader("Результат")
 
-        # Warnings
         if daily_deficit > tdee * 0.5:
             st.warning(
                 f"Цель слишком агрессивная: требуемый дефицит "
@@ -90,7 +170,6 @@ def render_calculator_tab() -> None:
                 f"зафиксировано на **{MIN_SAFE_CALORIES} ккал**."
             )
 
-        # Key metrics
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Калории", format_kcal(target_cal))
         m2.metric("Белки", format_grams(macros["protein"]))
@@ -99,7 +178,6 @@ def render_calculator_tab() -> None:
 
         st.divider()
 
-        # Intermediate values
         activity_label = _ACTIVITY_LABELS.get(multiplier, "")
         st.info(
             f"**Базовый обмен (BMR):** {format_kcal(bmr)}  \n"
@@ -108,11 +186,9 @@ def render_calculator_tab() -> None:
             f"**Период:** {period_days} дней"
         )
 
-        # Macro calorie breakdown bar chart
-        st.caption("Распределение калорий по макронутриентам")
-        macro_cal = {
-            "Белки": macros["protein"] * 4,
-            "Жиры": macros["fat"] * 9,
-            "Углеводы": macros["carbs"] * 4,
-        }
-        st.bar_chart(macro_cal, use_container_width=True, height=200)
+        c1, c2 = st.columns([3, 2])
+        with c1:
+            st.caption("Распределение калорий по макронутриентам")
+            st.plotly_chart(_donut_chart(macros, target_cal), use_container_width=True)
+        with c2:
+            st.plotly_chart(_energy_gauge(target_cal, tdee), use_container_width=True)

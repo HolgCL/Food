@@ -35,7 +35,8 @@ _CATEGORY_COLORS = {
 
 def _bar_chart(df_full: pd.DataFrame, nutrient_col: str, nutrient_key: str) -> None:
     top = (
-        df_full[["Продукт", "Категория", nutrient_col, "Калории", "Белки (г)", "Клетчатка (г)"]]
+        df_full[["Продукт", "Категория", nutrient_col, "Калории", "Белки (г)", "Клетчатка (г)", "Жиры (г)", "Углеводы (г)"]]
+        .drop_duplicates()
         .sort_values(nutrient_col, ascending=True)
         .tail(15)
     )
@@ -47,7 +48,7 @@ def _bar_chart(df_full: pd.DataFrame, nutrient_col: str, nutrient_key: str) -> N
         orientation="h",
         color="Категория",
         color_discrete_map=_CATEGORY_COLORS,
-        custom_data=["Категория", "Калории", "Белки (г)", "Клетчатка (г)"],
+        custom_data=["Категория", "Калории", "Белки (г)", "Клетчатка (г)", "Жиры (г)", "Углеводы (г)"],
     )
 
     fig.update_traces(
@@ -57,7 +58,9 @@ def _bar_chart(df_full: pd.DataFrame, nutrient_col: str, nutrient_key: str) -> N
             "<b>Категория:</b> %{customdata[0]}<br>"
             "<b>Калории:</b> %{customdata[1]:.0f} ккал<br>"
             "<b>Белки:</b> %{customdata[2]:.1f} г<br>"
-            "<b>Клетчатка:</b> %{customdata[3]:.1f} г"
+            "<b>Клетчатка:</b> %{customdata[3]:.1f} г<br>"
+            "<b>Жиры:</b> %{customdata[4]:.1f} г<br>"
+            "<b>Углеводы:</b> %{customdata[5]:.1f} г"
             "<extra></extra>"
         ),
         marker_line_width=0,

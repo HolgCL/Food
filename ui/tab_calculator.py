@@ -266,7 +266,7 @@ def render_calculator_tab() -> None:
         b1, b2, b3, b4 = st.columns(4)
         b1.metric("ИМТ", f"{bmi:.1f}")
         b2.metric("Категория", bmi_label)
-        b3.metric("Идеальный вес", f"{ideal_min}–{ideal_max} кг")
+        b3.metric("Идеальный вес", f"{int(ideal_min)}–{int(ideal_max)} кг")
         diff = round(weight - ideal_max, 1)
         b4.metric("До нормы", f"{diff:+.1f} кг" if diff != 0 else "В норме")
 
